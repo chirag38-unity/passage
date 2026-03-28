@@ -71,7 +71,11 @@ class CustomAuthPlugin(
         val user = _currentUser.value
             ?: return Result.failure(IllegalStateException("No authenticated user found to retrieve token."))
         return runCatching {
-            if (forceRefresh) authProvider.refreshToken(user.id) else (user.token ?: authProvider.refreshToken(user.id))
+            if (forceRefresh || user.token == null) {
+                authProvider.refreshToken(user.id)
+            } else {
+                user.token
+            }
         }
     }
 
