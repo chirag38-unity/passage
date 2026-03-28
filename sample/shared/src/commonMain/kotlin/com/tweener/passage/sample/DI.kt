@@ -1,15 +1,15 @@
 package com.tweener.passage.sample
 
-import com.tweener.passage.Passage
+import com.tweener.passage.firebase.PassageFirebase
 
 /**
  * @author Vivien Mahe
  * @since 04/12/2024
  */
 
-private val passage: Passage = createPassage()
+private val passage: PassageFirebase = createPassage()
 
-expect fun createPassage(): Passage
+expect fun createPassage(): PassageFirebase
 
-fun providePassage(): Passage = passage
+fun providePassage(): PassageFirebase = passage
 

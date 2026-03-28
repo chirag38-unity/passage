@@ -21,7 +21,7 @@ kotlin {
             isStatic = true
 
             // Add here any extra framework dependencies
-            export(project(":passage"))
+            export(project(":passage-auth-firebase"))
         }
     }
 
@@ -29,7 +29,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            api(project(":passage"))
+            api(project(":passage-auth-firebase"))
 
             // Tweener
             implementation(libs.kmpkit)

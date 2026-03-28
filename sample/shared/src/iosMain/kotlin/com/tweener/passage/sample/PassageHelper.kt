@@ -1,6 +1,6 @@
 package com.tweener.passage.sample
 
-import com.tweener.passage.Passage
+import com.tweener.passage.firebase.PassageFirebase
 
 /**
  * @author Vivien Mahe
@@ -9,7 +9,7 @@ import com.tweener.passage.Passage
 
 class PassageHelper {
 
-    private val passage: Passage = providePassage()
+    private val passage: PassageFirebase = providePassage()
 
     fun handle(url: String): Boolean =
         passage.handleLink(url = url)

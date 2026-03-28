@@ -32,23 +32,23 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import com.tweener.passage.Passage
-import com.tweener.passage.gatekeeper.email.model.PassageEmailAuthParams
-import com.tweener.passage.gatekeeper.email.model.PassageEmailVerificationAndroidParams
-import com.tweener.passage.gatekeeper.email.model.PassageEmailVerificationIosParams
-import com.tweener.passage.gatekeeper.email.model.PassageEmailVerificationParams
-import com.tweener.passage.gatekeeper.email.model.PassageForgotPasswordAndroidParams
-import com.tweener.passage.gatekeeper.email.model.PassageForgotPasswordIosParams
-import com.tweener.passage.gatekeeper.email.model.PassageForgotPasswordParams
-import com.tweener.passage.gatekeeper.email.model.PassageSignInLinkToEmailAndroidParams
-import com.tweener.passage.gatekeeper.email.model.PassageSignInLinkToEmailIosParams
-import com.tweener.passage.gatekeeper.email.model.PassageSignInLinkToEmailParams
-import com.tweener.passage.model.AppleGatekeeperConfiguration
-import com.tweener.passage.model.EmailPasswordGatekeeperConfiguration
-import com.tweener.passage.model.Entrant
-import com.tweener.passage.model.GoogleGatekeeperAndroidConfiguration
-import com.tweener.passage.model.GoogleGatekeeperConfiguration
-import com.tweener.passage.model.PassageUniversalLinkMode
+import com.tweener.passage.core.model.Entrant
+import com.tweener.passage.core.model.PassageUniversalLinkMode
+import com.tweener.passage.firebase.PassageFirebase
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageEmailAuthParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageEmailVerificationAndroidParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageEmailVerificationIosParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageEmailVerificationParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageForgotPasswordAndroidParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageForgotPasswordIosParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageForgotPasswordParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageSignInLinkToEmailAndroidParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageSignInLinkToEmailIosParams
+import com.tweener.passage.firebase.gatekeeper.email.model.PassageSignInLinkToEmailParams
+import com.tweener.passage.firebase.model.AppleGatekeeperConfiguration
+import com.tweener.passage.firebase.model.EmailPasswordGatekeeperConfiguration
+import com.tweener.passage.firebase.model.GoogleGatekeeperAndroidConfiguration
+import com.tweener.passage.firebase.model.GoogleGatekeeperConfiguration
 import com.tweener.passage.sample.ui.theme.PassageTheme
 import kotlinx.coroutines.launch
 
@@ -57,7 +57,7 @@ fun App() {
     val buttonsScope = rememberCoroutineScope()
     val snackbarScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val passage: Passage = providePassage()
+    val passage: PassageFirebase = providePassage()
     var entrant by remember { mutableStateOf<Entrant?>(null) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
