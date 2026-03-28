@@ -37,8 +37,9 @@ class SupabaseCredentialHandler(
                 client.auth.signInWith(IDToken) {
                     idToken = credential.idToken
                     provider = when (credential.provider) {
+                        "google" -> Google
                         "apple" -> Apple
-                        else -> Google
+                        else -> throw IllegalArgumentException("Unsupported Supabase ID token provider: '${credential.provider}'. Supported: 'google', 'apple'.")
                     }
                     credential.nonce?.let { nonce = it }
                     credential.accessToken?.let { accessToken = it }

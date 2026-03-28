@@ -62,7 +62,7 @@ class FirebaseGoogleGatekeeperAndroid(
 
     override suspend fun signIn(): Result<PassageAuthResult> = suspendCatching {
         var attempts = 0
-        var lastThrowable: Throwable?
+        var lastThrowable: Throwable? = null
         var currentUseGoogleButtonFlow = useGoogleButtonFlow
 
         while (attempts <= maxRetries) {
@@ -97,13 +97,13 @@ class FirebaseGoogleGatekeeperAndroid(
                     currentUseGoogleButtonFlow = currentUseGoogleButtonFlow.not()
 
                     if (attempts >= maxRetries) {
-                        throw lastThrowable!!
+                        throw lastThrowable ?: PassageGatekeeperUnknownEntrantException()
                     }
                 },
             )
         }
 
-        throw PassageGatekeeperUnknownEntrantException()
+        throw lastThrowable ?: PassageGatekeeperUnknownEntrantException()
     }
 
     override suspend fun signOut() {

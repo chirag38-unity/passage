@@ -36,6 +36,14 @@ actual class PassageViewBinder {
      */
     fun getActivityResult(): ActivityResult? = _activityResult
 
+    /**
+     * Consumes and clears the current activity result to prevent stale results
+     * from being used in subsequent authentication flows.
+     */
+    fun consumeActivityResult() {
+        _activityResult = null
+    }
+
     @Composable
     actual fun bind() {
         _activityContext = LocalContext.current
