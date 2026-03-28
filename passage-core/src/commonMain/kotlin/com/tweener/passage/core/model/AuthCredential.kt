@@ -18,11 +18,13 @@ sealed interface AuthCredential {
      *
      * @param idToken The identity token from the provider.
      * @param accessToken An optional access token from the provider.
+     * @param nonce An optional nonce for providers that require it (e.g., Apple Sign-In).
      * @param provider An optional provider identifier (e.g., "google", "apple").
      */
     data class IdToken(
         val idToken: String,
         val accessToken: String? = null,
+        val nonce: String? = null,
         val provider: String? = null,
     ) : AuthCredential
 

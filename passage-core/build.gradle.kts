@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.jetbrains.compose.compiler)
 }
 
 android {
@@ -11,6 +13,10 @@ android {
 
     defaultConfig {
         minSdk = ProjectConfiguration.Passage.minSDK
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -41,6 +47,15 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlin.coroutines.core)
+
+            // Compose
+            implementation(compose.runtime)
+        }
+
+        androidMain.dependencies {
+            // Compose (for LocalContext, rememberLauncherForActivityResult)
+            implementation(compose.foundation)
+            implementation(libs.android.activity.compose)
         }
 
         commonTest.dependencies {

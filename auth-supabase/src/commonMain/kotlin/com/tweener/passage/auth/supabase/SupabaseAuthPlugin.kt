@@ -1,131 +1,79 @@
 package com.tweener.passage.auth.supabase
 
-import com.tweener.passage.auth.supabase.model.SupabaseUser
+import com.tweener.passage.auth.supabase.handler.SupabaseCredentialHandler
 import com.tweener.passage.core.model.AuthCredential
 import com.tweener.passage.core.model.PassageAuthResult
 import com.tweener.passage.core.plugin.PassageAuthPlugin
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 
 /**
  * Supabase implementation of [PassageAuthPlugin].
  *
- * Provides authentication using Supabase's ID token-based authentication.
- * This plugin accepts a [SupabaseAuthProvider] to delegate actual HTTP communication,
- * keeping this module free of HTTP client dependencies.
+ * Provides authentication using the real Supabase SDK via an injected [SupabaseClient].
+ * The client instance must be created and configured externally — this plugin does NOT
+ * create the client internally, following the same pattern as [com.tweener.passage.auth.firebase.FirebaseAuthPlugin].
  *
  * ### Usage
  * ```kotlin
- * val plugin = SupabaseAuthPlugin(
- *     authProvider = object : SupabaseAuthProvider {
- *         // Implement using your preferred HTTP client (Ktor, OkHttp, etc.)
- *     }
- * )
+ * val supabaseClient = createSupabaseClient(
+ *     supabaseUrl = "https://your-project.supabase.co",
+ *     supabaseKey = "your-anon-key"
+ * ) {
+ *     install(Auth)
+ * }
+ *
+ * val plugin = SupabaseAuthPlugin(client = supabaseClient)
  * val core = PassageCore(
  *     authPlugin = plugin,
  *     userMapper = SupabaseUserMapper()
  * )
  * ```
  *
- * @param authProvider The provider that handles actual Supabase API communication.
+ * @param client The externally-created Supabase client instance.
  */
 class SupabaseAuthPlugin(
-    private val authProvider: SupabaseAuthProvider,
+    private val client: SupabaseClient,
 ) : PassageAuthPlugin {
 
-    private val _currentUser = MutableStateFlow<SupabaseUser?>(null)
+    private val credentialHandler = SupabaseCredentialHandler(client)
 
-    override suspend fun signIn(credential: AuthCredential): Result<PassageAuthResult> = runCatching {
-        val user = when (credential) {
-            is AuthCredential.EmailPassword -> authProvider.signInWithEmail(credential.email, credential.password)
-            is AuthCredential.IdToken -> authProvider.signInWithIdToken(credential.idToken, credential.provider ?: "google")
-            else -> throw IllegalArgumentException("Unsupported credential type for Supabase: ${credential::class.simpleName}")
-        }
-        _currentUser.value = user
-        PassageAuthResult(backendUser = user)
-    }
+    override suspend fun signIn(credential: AuthCredential): Result<PassageAuthResult> =
+        credentialHandler.authenticate(credential)
 
-    override suspend fun signUp(credential: AuthCredential): Result<PassageAuthResult> = runCatching {
-        val params = credential as? AuthCredential.EmailPassword
-            ?: throw IllegalArgumentException("Supabase sign-up requires EmailPassword credentials.")
-        val user = authProvider.signUpWithEmail(params.email, params.password)
-        _currentUser.value = user
-        PassageAuthResult(backendUser = user)
-    }
+    override suspend fun signUp(credential: AuthCredential): Result<PassageAuthResult> =
+        credentialHandler.createUser(credential)
 
     override suspend fun signOut() {
-        authProvider.signOut()
-        _currentUser.value = null
+        client.auth.signOut()
     }
 
     override suspend fun reauthenticate(credential: AuthCredential): Result<Unit> =
         signIn(credential).map { }
 
-    override fun getCurrentUser(): SupabaseUser? =
-        _currentUser.value
+    override fun getCurrentUser(): Any? =
+        client.auth.currentUserOrNull()
 
-    @Suppress("USELESS_CAST")
     override fun observeAuthState(): Flow<Any?> =
-        _currentUser as Flow<Any?>
+        client.auth.sessionStatus.map {
+            when (it) {
+                is SessionStatus.Authenticated -> client.auth.currentUserOrNull()
+                else -> null
+            }
+        }
 
-    override suspend fun getIdToken(forceRefresh: Boolean): Result<String> =
-        runCatching { authProvider.getAccessToken(forceRefresh) }
+    override suspend fun getIdToken(forceRefresh: Boolean): Result<String> = runCatching {
+        if (forceRefresh) {
+            client.auth.refreshCurrentSession()
+        }
+        client.auth.currentSessionOrNull()?.accessToken
+            ?: error("No active Supabase session found.")
+    }
 
     override suspend fun deleteCurrentUser() {
-        val user = _currentUser.value ?: throw IllegalStateException("No authenticated user to delete.")
-        authProvider.deleteUser(user.id)
-        _currentUser.value = null
+        throw UnsupportedOperationException("Deleting users requires server-side admin privileges in Supabase.")
     }
-}
-
-/**
- * Provides the actual Supabase API communication.
- *
- * Implement this interface using your preferred HTTP client to handle
- * Supabase authentication operations.
- */
-interface SupabaseAuthProvider {
-
-    /**
-     * Signs in a user with email and password.
-     *
-     * @return The authenticated [SupabaseUser].
-     */
-    suspend fun signInWithEmail(email: String, password: String): SupabaseUser
-
-    /**
-     * Signs in a user with a third-party ID token.
-     *
-     * @param idToken The ID token from the provider.
-     * @param provider The provider name (e.g., "google", "apple").
-     * @return The authenticated [SupabaseUser].
-     */
-    suspend fun signInWithIdToken(idToken: String, provider: String): SupabaseUser
-
-    /**
-     * Creates a new user with email and password.
-     *
-     * @return The created [SupabaseUser].
-     */
-    suspend fun signUpWithEmail(email: String, password: String): SupabaseUser
-
-    /**
-     * Signs out the current user.
-     */
-    suspend fun signOut()
-
-    /**
-     * Retrieves the current access token.
-     *
-     * @param forceRefresh Whether to force a token refresh.
-     * @return The access token string.
-     */
-    suspend fun getAccessToken(forceRefresh: Boolean): String
-
-    /**
-     * Deletes a user by ID.
-     *
-     * @param userId The ID of the user to delete.
-     */
-    suspend fun deleteUser(userId: String)
 }

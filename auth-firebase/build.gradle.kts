@@ -3,6 +3,9 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.library)
+    alias(libs.plugins.jetbrains.compose)
+    alias(libs.plugins.jetbrains.compose.compiler)
+    alias(libs.plugins.kotlin.nativeCocoaPods)
 }
 
 android {
@@ -11,6 +14,10 @@ android {
 
     defaultConfig {
         minSdk = ProjectConfiguration.Passage.minSDK
+    }
+
+    buildFeatures {
+        compose = true
     }
 
     compileOptions {
@@ -38,15 +45,40 @@ kotlin {
         }
     }
 
+    cocoapods {
+        ios.deploymentTarget = ProjectConfiguration.iOS.deploymentTarget
+
+        pod("GoogleSignIn")
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(project(":passage-core"))
+
+            // Tweener
+            implementation(libs.kmpkit)
 
             // Coroutines
             implementation(libs.kotlin.coroutines.core)
 
             // Firebase
             implementation(libs.firebase.auth)
+
+            // Compose
+            implementation(compose.runtime)
+        }
+
+        androidMain.dependencies {
+            // Coroutines
+            implementation(libs.kotlin.coroutines.android)
+
+            // Google Sign In
+            implementation(libs.bundles.googleSignIn)
+            implementation(libs.android.activity.compose)
+        }
+
+        iosMain.dependencies {
+
         }
     }
 }

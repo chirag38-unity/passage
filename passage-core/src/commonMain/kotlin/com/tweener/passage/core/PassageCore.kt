@@ -1,5 +1,6 @@
 package com.tweener.passage.core
 
+import androidx.compose.runtime.Composable
 import com.tweener.passage.core.mapper.PassageUserMapper
 import com.tweener.passage.core.model.AuthCredential
 import com.tweener.passage.core.model.Entrant
@@ -42,6 +43,31 @@ class PassageCore(
     private val authPlugin: PassageAuthPlugin,
     private val userMapper: PassageUserMapper,
 ) {
+
+    /**
+     * Platform-specific lifecycle binder.
+     *
+     * On Android, provides access to the activity context and activity result launcher
+     * needed for native OAuth flows (Google Sign-In, etc.).
+     * On iOS, this is a no-op holder.
+     *
+     * Gatekeepers and plugins can access this to obtain platform-specific resources.
+     */
+    val viewBinder = PassageViewBinder()
+
+    /**
+     * Binds Passage to the current Composable view.
+     *
+     * This method is necessary when using native OAuth gatekeepers on Android,
+     * as they require access to the current Activity-based context.
+     * On iOS, this is a no-op.
+     *
+     * Must be called from a @Composable context.
+     */
+    @Composable
+    fun bindToView() {
+        viewBinder.bind()
+    }
 
     /**
      * Signs in a user with the given credentials.

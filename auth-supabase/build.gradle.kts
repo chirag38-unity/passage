@@ -44,6 +44,20 @@ kotlin {
 
             // Coroutines
             implementation(libs.kotlin.coroutines.core)
+
+            // Supabase
+            implementation(platform(libs.supabase.bom))
+            implementation(libs.supabase.auth)
+        }
+
+        androidMain.dependencies {
+            // Ktor engine for Android
+            implementation(libs.ktor.client.android)
+        }
+
+        iosMain.dependencies {
+            // Ktor engine for iOS
+            implementation(libs.ktor.client.darwin)
         }
     }
 }
