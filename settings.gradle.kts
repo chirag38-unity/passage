@@ -17,5 +17,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "Passage"
 include(":passage")
+include(":passage-core")
+include(":auth-firebase")
+include(":auth-supabase")
+include(":auth-custom")
 include(":sample:shared")
 include(":sample:androidApp")

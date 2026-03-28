@@ -31,6 +31,7 @@ firebase-auth = { group = "dev.gitlive", name = "firebase-auth", version.ref = "
 # Coroutines
 kotlin-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlin-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+kotlin-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "coroutines" }
 
 # Android
 android-core = { group = "androidx.core", name = "core-ktx", version.ref = "androidCore" }
