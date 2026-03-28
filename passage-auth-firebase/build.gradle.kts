@@ -6,6 +6,9 @@ plugins {
     alias(libs.plugins.jetbrains.compose.compiler)
 }
 
+group = ProjectConfiguration.Passage.Maven.group
+version = ProjectConfiguration.Passage.versionName
+
 android {
     namespace = ProjectConfiguration.Passage.packageName + ".firebase"
     compileSdk = ProjectConfiguration.Passage.compileSDK
