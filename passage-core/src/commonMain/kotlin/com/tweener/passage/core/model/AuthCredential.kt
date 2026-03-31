@@ -33,6 +33,7 @@ sealed interface AuthCredential {
      * @property idToken The Apple identity token obtained from the sign-in flow.
      * @property rawNonce The raw nonce used for validation during Apple Sign-In.
      * @property fullName The user's full name as provided by Apple, if available.
+     *   On iOS this is a platform-specific `NSPersonNameComponents` instance; on other platforms it may be `null`.
      */
-    data class AppleCredential(val idToken: String, val rawNonce: String, val fullName: String?) : AuthCredential
+    data class AppleCredential(val idToken: String, val rawNonce: String, val fullName: Any?) : AuthCredential
 }
