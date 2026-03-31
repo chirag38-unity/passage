@@ -317,9 +317,13 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
      * @throws IllegalArgumentException if the link does not contain a valid token.
      */
     private fun extractTokenFromLink(link: String): String {
+        if (!link.contains("token=")) {
+            throw IllegalArgumentException("Invalid magic link: no token found")
+        }
+
         return link.substringAfter("token=")
             .substringBefore("&")
-            .takeIf { it.isNotEmpty() && it != link }
-            ?: throw IllegalArgumentException("Invalid magic link: no token found")
+            .takeIf { it.isNotEmpty() }
+            ?: throw IllegalArgumentException("Invalid magic link: empty token value")
     }
 }
