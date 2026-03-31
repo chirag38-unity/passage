@@ -1,6 +1,9 @@
-import com.tweener.passage.auth.supabase.SupabaseUserMapper
+package com.tweener.passage.auth.supabase
+
 import com.tweener.passage.core.authplugin.AuthPlugin
+import com.tweener.passage.core.error.PassageEmailAddressAlreadyExistsException
 import com.tweener.passage.core.error.PassageGatekeeperUnknownEntrantException
+import com.tweener.passage.core.error.PassageInvalidCredentialsException
 import com.tweener.passage.core.gatekeeper.email.model.PassageEmailVerificationParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageForgotPasswordParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageSignInLinkToEmailParams
@@ -20,6 +23,22 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
+/**
+ * Supabase implementation of [AuthPlugin].
+ *
+ * This class delegates authentication operations to the Supabase Auth API,
+ * mapping Supabase-specific user representations to the domain model via [SupabaseUserMapper].
+ *
+ * Some operations that are Firebase-specific (e.g., `handleOobCode`, `verifyPasswordResetCode`)
+ * return [UnsupportedOperationException] because Supabase handles those flows differently.
+ *
+ * @param T The domain user type, constrained to [EntrantInterface].
+ * @property supabaseClient The Supabase client instance.
+ * @property supabaseUserMapper The mapper that converts Supabase [io.github.jan.supabase.auth.user.UserInfo] to [T].
+ *
+ * @author Chirag Redij
+ * @since 01/04/2026
+ */
 class SupabaseAuthPlugin<T : EntrantInterface>(
     private val supabaseClient: SupabaseClient,
     private val supabaseUserMapper: SupabaseUserMapper<T>,
@@ -31,7 +50,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
     override val authStateChanged: Flow<T?>
         get() = supabaseClient.auth.sessionStatus.map { status ->
             when (status) {
-                is SessionStatus.Authenticated -> supabaseUserMapper.map(status.session.user!!)
+                is SessionStatus.Authenticated -> status.session.user?.let { supabaseUserMapper.map(it) }
                 else -> null
             }
         }
@@ -59,12 +78,6 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                         email = credential.email
                         password = credential.password
                     }
-
-                    val user = supabaseClient.auth.currentUserOrNull()
-                        ?.let { supabaseUserMapper.map(it) }
-                        ?: return AuthResult.Error(Exception("User is null"))
-
-                    AuthResult.Success(user)
                 }
 
                 is AuthCredential.GoogleCredential -> {
@@ -73,29 +86,22 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                         provider = Google
                         accessToken = credential.accessToken
                     }
-
-                    val user = supabaseClient.auth.currentUserOrNull()
-                        ?.let { supabaseUserMapper.map(it) }
-                        ?: return AuthResult.Error(Exception("User is null"))
-
-                    AuthResult.Success(user)
                 }
 
                 is AuthCredential.AppleCredential -> {
                     supabaseClient.auth.signInWith(IDToken) {
                         idToken = credential.idToken
                         nonce = credential.rawNonce
-                        accessToken = credential.fullName as String
                         provider = Apple
                     }
-
-                    val user = supabaseClient.auth.currentUserOrNull()
-                        ?.let { supabaseUserMapper.map(it) }
-                        ?: return AuthResult.Error(Exception("User is null"))
-
-                    AuthResult.Success(user)
                 }
             }
+
+            val user = supabaseClient.auth.currentUserOrNull()
+                ?.let { supabaseUserMapper.map(it) }
+                ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
+
+            AuthResult.Success(user)
         } catch (e: Exception) {
             AuthResult.Error(mapPluginAuthError(e))
         }
@@ -109,18 +115,18 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                         email = credential.email
                         password = credential.password
                     }
-
-                    val user = supabaseClient.auth.currentUserOrNull()
-                        ?.let { supabaseUserMapper.map(it) }
-                        ?: return AuthResult.Error(Exception("User is null"))
-
-                    AuthResult.Success(user)
                 }
 
-                else -> AuthResult.Error(
+                else -> return AuthResult.Error(
                     UnsupportedOperationException("SignUp not supported for this credential")
                 )
             }
+
+            val user = supabaseClient.auth.currentUserOrNull()
+                ?.let { supabaseUserMapper.map(it) }
+                ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
+
+            AuthResult.Success(user)
         } catch (e: Exception) {
             AuthResult.Error(mapPluginAuthError(e))
         }
@@ -128,8 +134,8 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
 
     override suspend fun reauthenticate(credential: AuthCredential): AuthResult<Unit> {
         return try {
-            // Supabase doesn't have a direct reauthenticate method
-            // The common pattern is to sign in again, which refreshes the session
+            // Supabase doesn't have a direct reauthenticate method.
+            // The common pattern is to sign in again, which refreshes the session.
             when (credential) {
                 is AuthCredential.EmailCredential -> {
                     supabaseClient.auth.signInWith(Email) {
@@ -143,6 +149,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                     supabaseClient.auth.signInWith(IDToken) {
                         idToken = credential.idToken
                         provider = Google
+                        accessToken = credential.accessToken
                     }
                     AuthResult.Success(Unit)
                 }
@@ -172,8 +179,8 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
     }
 
     override suspend fun verifyPasswordResetCode(oobCode: String): AuthResult<String> {
-        // Supabase handles password reset differently - no code verification step
-        // The reset link contains a token that's validated server-side
+        // Supabase handles password reset differently — no code verification step.
+        // The reset link contains a token that's validated server-side.
         return AuthResult.Error(
             UnsupportedOperationException("Supabase doesn't use oobCode verification. Password reset is handled via email link.")
         )
@@ -184,8 +191,8 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         newPassword: String
     ): AuthResult<Unit> {
         return try {
-            // In Supabase, password update happens after clicking the reset link
-            // The user should be authenticated via the link, then update password
+            // In Supabase, password update happens after clicking the reset link.
+            // The user should be authenticated via the link, then update password.
             supabaseClient.auth.updateUser {
                 password = newPassword
             }
@@ -207,7 +214,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                 email = email
             )
             AuthResult.Success(Unit)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             AuthResult.Error(mapPluginAuthError(e))
         }
     }
@@ -216,8 +223,8 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         oobCode: String,
         type: ActionCodeType
     ): AuthResult<Unit> {
-        // Supabase doesn't use Firebase's oobCode pattern
-        // Email verification and password reset are handled through direct links
+        // Supabase doesn't use Firebase's oobCode pattern.
+        // Email verification and password reset are handled through direct links.
         return AuthResult.Error(
             UnsupportedOperationException("Supabase doesn't use oobCode. Use direct email links instead.")
         )
@@ -233,7 +240,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                 createUser = false
             }
             AuthResult.Success(Unit)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             AuthResult.Error(mapPluginAuthError(e))
         }
     }
@@ -241,12 +248,11 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
     override suspend fun isSignInWithEmailLink(link: String): AuthResult<Boolean> {
         return try {
             // Check if the link contains Supabase auth tokens
-            // Typically checks for 'access_token' or 'refresh_token' fragments
             val isValidLink = link.contains("access_token=") ||
                     link.contains("type=magiclink") ||
                     link.contains("type=recovery")
             AuthResult.Success(isValidLink)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             AuthResult.Error(mapPluginAuthError(e))
         }
     }
@@ -256,7 +262,6 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         link: String
     ): AuthResult<T> {
         return try {
-            // Supabase OTP verification with token from email
             supabaseClient.auth.verifyEmailOtp(
                 type = OtpType.Email.EMAIL,
                 email = email,
@@ -268,7 +273,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                 ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
 
             AuthResult.Success(user)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             AuthResult.Error(mapPluginAuthError(e))
         }
     }
@@ -285,10 +290,9 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
     override suspend fun deleteCurrentUser(): AuthResult<Unit> {
         return try {
             val userId = supabaseClient.auth.currentUserOrNull()?.id
-                ?: return AuthResult.Error(Exception("No user"))
+                ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
 
             // Supabase requires admin API to delete users
-            // Alternative: call a custom edge function or admin endpoint
             supabaseClient.auth.admin.deleteUser(userId)
 
             AuthResult.Success(Unit)
@@ -298,25 +302,24 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
     }
 
     override fun mapPluginAuthError(throwable: Throwable): Throwable {
+        val message = throwable.message ?: return throwable
         return when {
-            throwable.message?.contains("Invalid login credentials") == true ->
-                IllegalArgumentException("Invalid email or password")
-            throwable.message?.contains("User already registered") == true ->
-                IllegalStateException("User already exists")
-            throwable.message?.contains("Email not confirmed") == true ->
-                IllegalStateException("Email not verified")
+            message.contains("Invalid login credentials") -> PassageInvalidCredentialsException()
+            message.contains("User already registered") -> PassageEmailAddressAlreadyExistsException()
+            message.contains("Email not confirmed") -> IllegalStateException("Email not verified")
             else -> throwable
         }
     }
 
     /**
-     * Extracts OTP token from magic link URL
+     * Extracts the OTP token from a magic link URL by parsing the `token` query parameter.
+     *
+     * @throws IllegalArgumentException if the link does not contain a valid token.
      */
     private fun extractTokenFromLink(link: String): String {
-        // Extract token from URL fragments or query parameters
         return link.substringAfter("token=")
             .substringBefore("&")
-            .takeIf { it.isNotEmpty() }
+            .takeIf { it.isNotEmpty() && it != link }
             ?: throw IllegalArgumentException("Invalid magic link: no token found")
     }
 }
