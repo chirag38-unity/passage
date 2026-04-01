@@ -7,10 +7,10 @@ import com.tweener.passage.core.error.PassageInvalidCredentialsException
 import com.tweener.passage.core.gatekeeper.email.model.PassageEmailVerificationParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageForgotPasswordParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageSignInLinkToEmailParams
-import com.tweener.passage.core.model.ActionCodeType
 import com.tweener.passage.core.model.AuthCredential
 import com.tweener.passage.core.model.AuthResult
 import com.tweener.passage.core.model.EntrantInterface
+import com.tweener.passage.core.model.PassageUniversalLinkMode
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.providers.Apple
@@ -220,7 +220,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
 
     override suspend fun handleOobCode(
         oobCode: String,
-        type: ActionCodeType
+        mode: PassageUniversalLinkMode
     ): AuthResult<Unit> {
         // Supabase doesn't use Firebase's oobCode pattern.
         // Email verification and password reset are handled through direct links.

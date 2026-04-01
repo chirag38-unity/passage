@@ -7,10 +7,10 @@ import com.tweener.passage.core.gatekeeper.email.model.PassageEmailAuthParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageEmailVerificationParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageForgotPasswordParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageSignInLinkToEmailParams
-import com.tweener.passage.core.model.ActionCodeType
 import com.tweener.passage.core.model.AuthCredential
 import com.tweener.passage.core.model.AuthResult
 import com.tweener.passage.core.model.EntrantInterface
+import com.tweener.passage.core.model.PassageUniversalLinkMode
 import kotlin.jvm.JvmInline
 
 @JvmInline
@@ -121,7 +121,7 @@ internal class PassageEmailGatekeeper<T : EntrantInterface>(
     suspend fun handleEmailVerificationCode(oobCode: String): Result<Unit> {
         return when (val result = authPlugin.handleOobCode(
             oobCode = oobCode,
-            type = ActionCodeType.VerifyEmail
+            mode = PassageUniversalLinkMode.VERIFY_EMAIL
         )) {
             is AuthResult.Success -> Result.success(Unit)
             is AuthResult.Error -> {

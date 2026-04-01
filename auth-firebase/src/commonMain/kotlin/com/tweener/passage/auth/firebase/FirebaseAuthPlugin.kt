@@ -10,10 +10,10 @@ import com.tweener.passage.core.error.PassageWeakPasswordException
 import com.tweener.passage.core.gatekeeper.email.model.PassageEmailVerificationParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageForgotPasswordParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageSignInLinkToEmailParams
-import com.tweener.passage.core.model.ActionCodeType
 import com.tweener.passage.core.model.AuthCredential
 import com.tweener.passage.core.model.AuthResult
 import com.tweener.passage.core.model.EntrantInterface
+import com.tweener.passage.core.model.PassageUniversalLinkMode
 import dev.gitlive.firebase.auth.ActionCodeResult
 import dev.gitlive.firebase.auth.ActionCodeSettings
 import dev.gitlive.firebase.auth.AndroidPackageName
@@ -218,24 +218,24 @@ class FirebaseAuthPlugin<T : EntrantInterface>(
 
     override suspend fun handleOobCode(
         oobCode: String,
-        type: ActionCodeType
+        mode: PassageUniversalLinkMode
     ): AuthResult<Unit> {
         return try {
 
-            when (type) {
+            when (mode) {
 
-                ActionCodeType.VerifyEmail -> {
+                PassageUniversalLinkMode.VERIFY_EMAIL -> {
                     firebaseAuth.checkActionCode<ActionCodeResult.VerifyEmail>(oobCode)
                     firebaseAuth.applyActionCode(oobCode)
                     firebaseAuth.currentUser?.reload()
                 }
 
-                ActionCodeType.PasswordReset -> {
+                PassageUniversalLinkMode.RESET_PASSWORD -> {
                     firebaseAuth.checkActionCode<ActionCodeResult.PasswordReset>(oobCode)
                     // DO NOT apply here → handled separately via confirmPasswordReset
                 }
 
-                ActionCodeType.SignInWithEmailLink -> {
+                PassageUniversalLinkMode.SIGN_IN_EMAIL -> {
                     firebaseAuth.checkActionCode<ActionCodeResult.SignInWithEmailLink>(oobCode)
                 }
             }

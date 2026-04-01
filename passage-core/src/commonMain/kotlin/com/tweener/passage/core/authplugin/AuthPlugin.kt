@@ -3,10 +3,10 @@ package com.tweener.passage.core.authplugin
 import com.tweener.passage.core.gatekeeper.email.model.PassageEmailVerificationParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageForgotPasswordParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageSignInLinkToEmailParams
-import com.tweener.passage.core.model.ActionCodeType
 import com.tweener.passage.core.model.AuthCredential
 import com.tweener.passage.core.model.AuthResult
 import com.tweener.passage.core.model.EntrantInterface
+import com.tweener.passage.core.model.PassageUniversalLinkMode
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -119,15 +119,15 @@ interface AuthPlugin<T : EntrantInterface> {
     ): AuthResult<Unit>
 
     /**
-     * Processes an out-of-band action code of the given [type].
+     * Processes an out-of-band action code of the given [mode].
      *
      * @param oobCode The out-of-band code to process.
-     * @param type The type of action this code represents (e.g., email verification, password reset).
+     * @param mode The type of action this code represents (e.g., email verification, password reset).
      * @return [AuthResult.Success] on success, or [AuthResult.Error] on failure.
      */
     suspend fun handleOobCode(
         oobCode: String,
-        type: ActionCodeType
+        mode: PassageUniversalLinkMode
     ): AuthResult<Unit>
 
     /**
