@@ -17,7 +17,7 @@ import kotlin.jvm.JvmInline
 value class EmailAddress(val email: String)
 
 /**
- * Handles authentication with Firebase via email.
+ * Handles authentication with Backend Adapter via email.
  *
  * This class provides functionality for signing in users using their email and password.
  * It also provides methods to create a new user with email and password, send a password reset email and send an email address verification email.
@@ -43,7 +43,7 @@ internal class PassageEmailGatekeeper<T : EntrantInterface>(
     }
 
     override suspend fun signOut() {
-        authPlugin.signOut()
+        // Nothing to do here (same behavior)
     }
 
     suspend fun signUp(params: PassageEmailAuthParams): Result<T> {

@@ -195,7 +195,7 @@ abstract class Passage<T : EntrantInterface> {
      * Creates the Google Gatekeeper for handling authentication.
      *
      * @param configuration The configuration for the Google Gatekeeper.
-     * @param firebaseAuth The Firebase authentication instance.
+     * @param authPlugin The Backend Adapter authentication instance.
      * @return The created [PassageGoogleGatekeeper].
      */
     internal abstract fun createGoogleGatekeeper(configuration: GoogleGatekeeperConfiguration, authPlugin: AuthPlugin<T>): PassageGoogleGatekeeper<T>
@@ -218,6 +218,7 @@ abstract class Passage<T : EntrantInterface> {
      * Creates the Apple Gatekeeper for handling authentication.
      *
      * @param configuration The configuration for the Apple Gatekeeper.
+     * @param authPlugin The Backend Adapter authentication instance.
      * @return The created [PassageAppleGatekeeper].
      */
     internal abstract fun createAppleGatekeeper(configuration: AppleGatekeeperConfiguration, authPlugin: AuthPlugin<T>): PassageAppleGatekeeper<T>
@@ -230,6 +231,7 @@ abstract class Passage<T : EntrantInterface> {
      * Creates the Email/Password Gatekeeper for handling authentication.
      *
      * @param configuration The configuration for the Email/Password Gatekeeper.
+     * @param authPlugin The Backend Adapter authentication instance.
      * @return The created [PassageEmailGatekeeper].
      */
     internal fun createEmailGatekeeper(

@@ -19,7 +19,7 @@ class DefaultFirebaseUserMapper : FirebaseUserMapper<DefaultEntrant> {
             email = firebaseUser.email,
             displayName = firebaseUser.displayName,
             phoneNumber = firebaseUser.phoneNumber,
-            photoUrl = firebaseUser.photoURL ?: firebaseUser.providerData.mapNotNull { it.photoURL }.firstOrNull(),
+            photoUrl = firebaseUser.photoURL ?: firebaseUser.providerData.firstNotNullOfOrNull { it.photoURL },
             isAnonymous = firebaseUser.isAnonymous,
             isEmailVerified = firebaseUser.isEmailVerified
         )

@@ -11,9 +11,8 @@ import com.tweener.passage.core.model.ActionCodeType
 import com.tweener.passage.core.model.AuthCredential
 import com.tweener.passage.core.model.AuthResult
 import com.tweener.passage.core.model.EntrantInterface
-import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.OtpType
-import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.Apple
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -33,22 +32,22 @@ import kotlinx.coroutines.flow.map
  * return [UnsupportedOperationException] because Supabase handles those flows differently.
  *
  * @param T The domain user type, constrained to [EntrantInterface].
- * @property supabaseClient The Supabase client instance.
+ * @property supabaseAuth The Supabase client auth plugin instance.
  * @property supabaseUserMapper The mapper that converts Supabase [io.github.jan.supabase.auth.user.UserInfo] to [T].
  *
  * @author Chirag Redij
  * @since 01/04/2026
  */
 class SupabaseAuthPlugin<T : EntrantInterface>(
-    private val supabaseClient: SupabaseClient,
+    private val supabaseAuth: Auth,
     private val supabaseUserMapper: SupabaseUserMapper<T>,
 ) : AuthPlugin<T> {
 
     override val currentUser: T?
-        get() = supabaseClient.auth.currentUserOrNull()?.let { supabaseUserMapper.map(it) }
+        get() = supabaseAuth.currentUserOrNull()?.let { supabaseUserMapper.map(it) }
 
     override val authStateChanged: Flow<T?>
-        get() = supabaseClient.auth.sessionStatus.map { status ->
+        get() = supabaseAuth.sessionStatus.map { status ->
             when (status) {
                 is SessionStatus.Authenticated -> status.session.user?.let { supabaseUserMapper.map(it) }
                 else -> null
@@ -57,7 +56,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
 
     override suspend fun getCurrentUser(): AuthResult<T?> {
         return try {
-            val user = supabaseClient.auth.currentUserOrNull()
+            val user = supabaseAuth.currentUserOrNull()
                 ?.let { supabaseUserMapper.map(it) }
 
             if (user != null) {
@@ -74,14 +73,14 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         return try {
             when (credential) {
                 is AuthCredential.EmailCredential -> {
-                    supabaseClient.auth.signInWith(Email) {
+                    supabaseAuth.signInWith(Email) {
                         email = credential.email
                         password = credential.password
                     }
                 }
 
                 is AuthCredential.GoogleCredential -> {
-                    supabaseClient.auth.signInWith(IDToken) {
+                    supabaseAuth.signInWith(IDToken) {
                         idToken = credential.idToken
                         provider = Google
                         accessToken = credential.accessToken
@@ -89,7 +88,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                 }
 
                 is AuthCredential.AppleCredential -> {
-                    supabaseClient.auth.signInWith(IDToken) {
+                    supabaseAuth.signInWith(IDToken) {
                         idToken = credential.idToken
                         nonce = credential.rawNonce
                         provider = Apple
@@ -97,7 +96,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                 }
             }
 
-            val user = supabaseClient.auth.currentUserOrNull()
+            val user = supabaseAuth.currentUserOrNull()
                 ?.let { supabaseUserMapper.map(it) }
                 ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
 
@@ -111,7 +110,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         return try {
             when (credential) {
                 is AuthCredential.EmailCredential -> {
-                    supabaseClient.auth.signUpWith(Email) {
+                    supabaseAuth.signUpWith(Email) {
                         email = credential.email
                         password = credential.password
                     }
@@ -122,7 +121,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                 )
             }
 
-            val user = supabaseClient.auth.currentUserOrNull()
+            val user = supabaseAuth.currentUserOrNull()
                 ?.let { supabaseUserMapper.map(it) }
                 ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
 
@@ -138,7 +137,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
             // The common pattern is to sign in again, which refreshes the session.
             when (credential) {
                 is AuthCredential.EmailCredential -> {
-                    supabaseClient.auth.signInWith(Email) {
+                    supabaseAuth.signInWith(Email) {
                         email = credential.email
                         password = credential.password
                     }
@@ -146,7 +145,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
                 }
 
                 is AuthCredential.GoogleCredential -> {
-                    supabaseClient.auth.signInWith(IDToken) {
+                    supabaseAuth.signInWith(IDToken) {
                         idToken = credential.idToken
                         provider = Google
                         accessToken = credential.accessToken
@@ -168,7 +167,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         params: PassageForgotPasswordParams
     ): AuthResult<Unit> {
         return try {
-            supabaseClient.auth.resetPasswordForEmail(
+            supabaseAuth.resetPasswordForEmail(
                 email = email,
                 redirectUrl = params.url
             )
@@ -193,7 +192,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         return try {
             // In Supabase, password update happens after clicking the reset link.
             // The user should be authenticated via the link, then update password.
-            supabaseClient.auth.updateUser {
+            supabaseAuth.updateUser {
                 password = newPassword
             }
             AuthResult.Success(Unit)
@@ -206,10 +205,10 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         params: PassageEmailVerificationParams
     ): AuthResult<Unit> {
         return try {
-            val email = supabaseClient.auth.currentUserOrNull()?.email
+            val email = supabaseAuth.currentUserOrNull()?.email
                 ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
 
-            supabaseClient.auth.resendEmail(
+            supabaseAuth.resendEmail(
                 type = OtpType.Email.SIGNUP,
                 email = email
             )
@@ -235,7 +234,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         params: PassageSignInLinkToEmailParams
     ): AuthResult<Unit> {
         return try {
-            supabaseClient.auth.signInWith(OTP) {
+            supabaseAuth.signInWith(OTP) {
                 this.email = email
                 createUser = false
             }
@@ -262,13 +261,13 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         link: String
     ): AuthResult<T> {
         return try {
-            supabaseClient.auth.verifyEmailOtp(
+            supabaseAuth.verifyEmailOtp(
                 type = OtpType.Email.EMAIL,
                 email = email,
                 token = extractTokenFromLink(link)
             )
 
-            val user = supabaseClient.auth.currentUserOrNull()
+            val user = supabaseAuth.currentUserOrNull()
                 ?.let { supabaseUserMapper.map(it) }
                 ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
 
@@ -280,7 +279,7 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
 
     override suspend fun signOut(): AuthResult<Unit> {
         return try {
-            supabaseClient.auth.signOut()
+            supabaseAuth.signOut()
             AuthResult.Success(Unit)
         } catch (e: Exception) {
             AuthResult.Error(mapPluginAuthError(e))
@@ -289,11 +288,11 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
 
     override suspend fun deleteCurrentUser(): AuthResult<Unit> {
         return try {
-            val userId = supabaseClient.auth.currentUserOrNull()?.id
+            val userId = supabaseAuth.currentUserOrNull()?.id
                 ?: return AuthResult.Error(PassageGatekeeperUnknownEntrantException())
 
             // Supabase requires admin API to delete users
-            supabaseClient.auth.admin.deleteUser(userId)
+            supabaseAuth.admin.deleteUser(userId)
 
             AuthResult.Success(Unit)
         } catch (e: Exception) {

@@ -3,7 +3,7 @@ package com.tweener.passage.core.model
 /**
  * Represents the type of an out-of-band (OOB) action code used in email-based authentication flows.
  *
- * Each type corresponds to a specific email action handled by the [AuthPlugin].
+ * Each type corresponds to a specific email action handled by the [com.tweener.passage.core.authplugin.AuthPlugin].
  *
  * @author Chirag Redij
  * @since 29/03/2026
