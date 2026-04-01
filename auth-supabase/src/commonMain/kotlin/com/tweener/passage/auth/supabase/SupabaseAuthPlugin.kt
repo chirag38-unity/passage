@@ -4,6 +4,7 @@ import com.tweener.passage.core.authplugin.AuthPlugin
 import com.tweener.passage.core.error.PassageEmailAddressAlreadyExistsException
 import com.tweener.passage.core.error.PassageGatekeeperUnknownEntrantException
 import com.tweener.passage.core.error.PassageInvalidCredentialsException
+import com.tweener.passage.core.error.PassageSignInLinkToEmailException
 import com.tweener.passage.core.gatekeeper.email.model.PassageEmailVerificationParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageForgotPasswordParams
 import com.tweener.passage.core.gatekeeper.email.model.PassageSignInLinkToEmailParams
@@ -13,6 +14,7 @@ import com.tweener.passage.core.model.EntrantInterface
 import com.tweener.passage.core.model.PassageUniversalLinkMode
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.OtpType
+import io.github.jan.supabase.auth.OtpVerifyResult
 import io.github.jan.supabase.auth.providers.Apple
 import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
@@ -222,11 +224,61 @@ class SupabaseAuthPlugin<T : EntrantInterface>(
         oobCode: String,
         mode: PassageUniversalLinkMode
     ): AuthResult<Unit> {
-        // Supabase doesn't use Firebase's oobCode pattern.
-        // Email verification and password reset are handled through direct links.
-        return AuthResult.Error(
-            UnsupportedOperationException("Supabase doesn't use oobCode. Use direct email links instead.")
-        )
+
+        val email = currentUser?.email
+            ?: return AuthResult.Error(
+                Exception("Email is required to verify OTP")
+            )
+
+        return try {
+            val result = when (mode) {
+                PassageUniversalLinkMode.VERIFY_EMAIL -> {
+                    supabaseAuth.verifyEmailOtp(
+                        type = OtpType.Email.EMAIL,
+                        email = email,
+                        token = oobCode
+                    )
+                }
+
+                PassageUniversalLinkMode.RESET_PASSWORD -> {
+                    supabaseAuth.verifyEmailOtp(
+                        type = OtpType.Email.RECOVERY,
+                        email = email,
+                        token = oobCode
+                    )
+                }
+
+                PassageUniversalLinkMode.SIGN_IN_EMAIL -> {
+                    supabaseAuth.verifyEmailOtp(
+                        type = OtpType.Email.SIGNUP,
+                        email = email,
+                        token = oobCode
+                    )
+                }
+            }
+
+            when (result) {
+                is OtpVerifyResult.Authenticated -> {
+                    AuthResult.Success(Unit)
+                }
+
+                OtpVerifyResult.VerifiedNoSession -> {
+                    AuthResult.Error(
+                        Exception(
+                            "OTP verified but no session was created"
+                        )
+                    )
+                }
+            }
+
+        } catch (e: Exception) {
+            AuthResult.Error(
+                Exception(
+                    message = e.message ?: "OTP verification failed",
+                    cause = e
+                )
+            )
+        }
     }
 
     override suspend fun sendSignInLinkToEmail(
